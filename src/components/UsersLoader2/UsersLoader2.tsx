@@ -1,8 +1,15 @@
 import React, { Component, ChangeEvent } from 'react';
 import { getUsers } from './../api/api'
+import { Spinner } from '../Spinner/Spinner'
+import UserPhoto from '../UserPhoto/UserPhoto';
+import styles from '../UsersLoader2/UserLoader2.module.css'
+import './style.css'
+import { MouseCoordinates } from '../MouseCoordinates/MouseCoordinates';
+import { WindowSize } from '../WindowSize/WindowSize';
 
 
-type TUser = {
+
+export type TUser = {
    name: {
       first: string;
       last: string;
@@ -10,15 +17,21 @@ type TUser = {
    login: {
       uuid: string;
    }
-   phone: number;
+   phone: string;
+   picture: {
+      large: string;
+   }
 }
 
+
+
 export interface ILoader {
-   users: Array<TUser>;
+   users: TUser[];
    isFetching: boolean;
    isError: boolean;
    page: number;
-   nationality: any;
+   nationality: string;
+   selectedUser: TUser | null;
 }
 
 export class UsersLoader2 extends Component<{}, ILoader> {
@@ -26,16 +39,18 @@ export class UsersLoader2 extends Component<{}, ILoader> {
       super(props);
       this.state = {
          users: [],
-         isFetching: true,
+         isFetching: false,
          isError: false,
          page: 1,
-         nationality: 'ua'
+         nationality: 'ua',
+         selectedUser: null
       }
-      console.log('constructor')
    }
-
    load = () => {
       const { page, nationality } = this.state;
+      this.setState({
+         isFetching: true
+      })
       getUsers({ nat: nationality, page: page })
          .then(data => {
             console.log(data)
@@ -44,22 +59,24 @@ export class UsersLoader2 extends Component<{}, ILoader> {
             })
          })
          .catch((error: Error) => {
-            this.setState({ isError: true, })
+            this.setState({ isError: true })
          })
          .finally(() => {
             this.setState({ isFetching: false })
          })
    }
 
-   componentDidMount(): void {
+   componentDidMount() {
       console.log('componentDidMount')
       this.load();
    }
+
    componentDidUpdate(prevProps: {}, prevState: ILoader): void {
       console.log('componentDidUpdate')
       if (prevState.page === this.state.page) { return; }
       this.load();
    }
+
    prevPage = () => {
       if (this.state.page > 1) {
          this.setState({
@@ -73,37 +90,58 @@ export class UsersLoader2 extends Component<{}, ILoader> {
       })
    }
 
-   showUser = (user: TUser) => <li key={user.login.uuid}>{`${user.name.first} ${user.name.last}`}: {user.phone}</li>
+   showUser = (user: TUser) => (
+      <li key={user.login.uuid} onClick={() => this.setState({ selectedUser: user })}>
+         {`${user.name.first} ${user.name.last}`}
+      </li>
+   )
+
 
    changeNat = (e: ChangeEvent<HTMLSelectElement>) => {
-      this.setState({ nationality: e.target.value }, () => {//
+      this.setState({ nationality: e.target.value }, () => {
          this.load();
       });
    }
    render() {
       console.log('render')
-      if (this.state.isFetching) {
-         return <p>Loading...</p>
-      }
+      // if (this.state.isFetching) {
+      //    return <Spinner />
+      // }
       if (this.state.isError) {
          return <p>Error...</p>
       }
+
+      const { users, isFetching, selectedUser } = this.state;
       return (
-         <section>
-            <h2>User List</h2>
-            <button onClick={this.prevPage}>{"<"}</button>
-            <button onClick={this.nextPage}>{">"}</button>
-            <span>page; {this.state.page}</span>
-            <select value={this.state.nationality} onChange={this.changeNat}>
-               <option value="ua">UA</option>
-               <option value="gb">GB</option>
-               <option value="nz">NZ</option>
-               <option value="dk">DK</option>
-               <option value="fr">FR</option>
-               <option value="ir">IR</option>
-            </select>
-            <ul>{this.state.users.map(this.showUser)}</ul>
-         </section >
+         <>
+            <div>
+               <MouseCoordinates />
+               <WindowSize />
+            </div>
+            <div className={styles.container}>
+               {isFetching && <Spinner />}
+               <section className={styles.userList}>
+                  <h2>User List</h2>
+                  <button onClick={this.prevPage}>{"<"}</button>
+                  <button onClick={this.nextPage}>{">"}</button>
+                  <span>page; {this.state.page}</span>
+                  <select value={this.state.nationality} onChange={this.changeNat}>
+                     <option value="ua">UA</option>
+                     <option value="gb">GB</option>
+                     <option value="nz">NZ</option>
+                     <option value="dk">DK</option>
+                     <option value="fr">FR</option>
+                     <option value="ir">IR</option>
+                  </select>
+                  <ul className='users-list'>
+                     {users.map(user => (
+                        <li className='users-text'>{this.showUser(user)}</li>
+                     ))}
+                  </ul>
+                  <div className='user-photo'>{selectedUser && <UserPhoto user={selectedUser} />}</div>
+               </section >
+            </div >
+         </>
       );
    }
 }

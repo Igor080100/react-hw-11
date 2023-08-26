@@ -1,0 +1,15 @@
+.users-text {
+   margin: 10px;
+   font-size: 20px;
+   border: 2px solid;
+   cursor: pointer;
+}
+
+.users-list {
+   padding: 20px;
+   text-align: center;
+}
+
+.user-photo {
+   text-align: center;
+}
