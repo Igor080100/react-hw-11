@@ -1,4 +1,4 @@
-import React, { Component, ChangeEvent } from 'react';
+import React, { useEffect, useState, ChangeEvent } from 'react';
 import { getUsers } from './../api/api'
 import { Spinner } from '../Spinner/Spinner'
 import UserPhoto from '../UserPhoto/UserPhoto';
@@ -6,8 +6,6 @@ import styles from '../UsersLoader2/UserLoader2.module.css'
 import './style.css'
 import { MouseCoordinates } from '../MouseCoordinates/MouseCoordinates';
 import { WindowSize } from '../WindowSize/WindowSize';
-
-
 
 export type TUser = {
    name: {
@@ -23,8 +21,6 @@ export type TUser = {
    }
 }
 
-
-
 export interface ILoader {
    users: TUser[];
    isFetching: boolean;
@@ -34,115 +30,102 @@ export interface ILoader {
    selectedUser: TUser | null;
 }
 
-export class UsersLoader2 extends Component<{}, ILoader> {
-   constructor(props: {}) {
-      super(props);
-      this.state = {
-         users: [],
-         isFetching: false,
-         isError: false,
-         page: 1,
-         nationality: 'ua',
-         selectedUser: null
-      }
-   }
-   load = () => {
-      const { page, nationality } = this.state;
-      this.setState({
-         isFetching: true
-      })
+export const UsersLoader2: React.FC = () => {
+   const [state, setState] = useState<ILoader>({
+      users: [],
+      isFetching: false,
+      isError: false,
+      page: 1,
+      nationality: 'ua',
+      selectedUser: null
+   });
+
+   useEffect(() => {
+      load();
+   }, [state.page, state.nationality]);
+
+
+   // componentDidMount() {
+   //    console.log('componentDidMount')
+   //    this.load();
+   // }
+
+   // componentDidUpdate(prevProps: {}, prevState: ILoader): void {
+   //    console.log('componentDidUpdate')
+   //    if (prevState.page === this.state.page) { return; }
+   //    this.load();
+   // }
+
+   const load = () => {
+      const { page, nationality } = state;
+      setState(prevState => ({ ...prevState, isFetching: true }));
       getUsers({ nat: nationality, page: page })
          .then(data => {
-            console.log(data)
-            this.setState({
-               users: data.results,
-            })
+            console.log(data);
+            setState(prevState => ({ ...prevState, users: data.results }));
          })
          .catch((error: Error) => {
-            this.setState({ isError: true })
+            setState(prevState => ({ ...prevState, isError: true }));
          })
          .finally(() => {
-            this.setState({ isFetching: false })
-         })
-   }
-
-   componentDidMount() {
-      console.log('componentDidMount')
-      this.load();
-   }
-
-   componentDidUpdate(prevProps: {}, prevState: ILoader): void {
-      console.log('componentDidUpdate')
-      if (prevState.page === this.state.page) { return; }
-      this.load();
-   }
-
-   prevPage = () => {
-      if (this.state.page > 1) {
-         this.setState({
-            page: this.state.page - 1
+            setState(prevState => ({ ...prevState, isFetching: false }));
          });
+   };
+
+   const prevPage = () => {
+      if (state.page > 1) {
+         setState(prevState => ({ ...prevState, page: prevState.page - 1 }));
       }
    }
-   nextPage = () => {
-      this.setState({
-         page: this.state.page + 1
-      })
+
+   const nextPage = () => {
+      setState(prevState => ({ ...prevState, page: prevState.page + 1 }));
    }
 
-   showUser = (user: TUser) => (
-      <li key={user.login.uuid} onClick={() => this.setState({ selectedUser: user })}>
+   const showUser = (user: TUser) => (
+      <li key={user.login.uuid} onClick={() => setState(prevState => ({ ...prevState, selectedUser: user }))}>
          {`${user.name.first} ${user.name.last}`}
       </li>
    )
 
+   const changeNat = (e: ChangeEvent<HTMLSelectElement>) => {
+      setState({ ...state, nationality: e.target.value });
+      load();
+   };
 
-   changeNat = (e: ChangeEvent<HTMLSelectElement>) => {
-      this.setState({ nationality: e.target.value }, () => {
-         this.load();
-      });
-   }
-   render() {
-      console.log('render')
-      // if (this.state.isFetching) {
-      //    return <Spinner />
-      // }
-      if (this.state.isError) {
-         return <p>Error...</p>
-      }
+   const { users, isFetching, selectedUser } = state;
 
-      const { users, isFetching, selectedUser } = this.state;
-      return (
-         <>
-            <div>
-               <MouseCoordinates />
-               <WindowSize />
-            </div>
-            <div className={styles.container}>
-               {isFetching && <Spinner />}
-               <section className={styles.userList}>
-                  <h2>User List</h2>
-                  <button onClick={this.prevPage}>{"<"}</button>
-                  <button onClick={this.nextPage}>{">"}</button>
-                  <span>page; {this.state.page}</span>
-                  <select value={this.state.nationality} onChange={this.changeNat}>
-                     <option value="ua">UA</option>
-                     <option value="gb">GB</option>
-                     <option value="nz">NZ</option>
-                     <option value="dk">DK</option>
-                     <option value="fr">FR</option>
-                     <option value="ir">IR</option>
-                  </select>
-                  <ul className='users-list'>
-                     {users.map(user => (
-                        <li className='users-text'>{this.showUser(user)}</li>
-                     ))}
-                  </ul>
-                  <div className='user-photo'>{selectedUser && <UserPhoto user={selectedUser} />}</div>
-               </section >
-            </div >
-         </>
-      );
-   }
+   return (
+      <>
+         <div>
+            <MouseCoordinates />
+            <WindowSize />
+         </div>
+         <div className={styles.container}>
+            {isFetching && <Spinner />}
+            <section className={styles.userList}>
+               <h2>User List</h2>
+               <button onClick={prevPage}>{"<"}</button>
+               <button onClick={nextPage}>{">"}</button>
+               <span>page; {state.page}</span>
+               <select value={state.nationality} onChange={changeNat}>
+                  <option value="ua">UA</option>
+                  <option value="gb">GB</option>
+                  <option value="nz">NZ</option>
+                  <option value="dk">DK</option>
+                  <option value="fr">FR</option>
+                  <option value="ir">IR</option>
+               </select>
+               <ul className='users-list'>
+                  {users.map(user => (
+                     <li className='users-text'>{showUser(user)}</li>
+                  ))}
+               </ul>
+               <div className='user-photo'>{selectedUser && <UserPhoto user={selectedUser} />}</div>
+            </section >
+         </div >
+      </>
+   );
 }
 
+   ;
